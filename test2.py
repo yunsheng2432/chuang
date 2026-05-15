@@ -15,6 +15,7 @@ class HuaTou(ErNiao):
     def find_son(self):
         print(f"{self.name} 的儿子是二鸟的孙子！")
 
+
 erniao = ErNiao("二鸟")
 huatou = HuaTou("滑滑头")
 
