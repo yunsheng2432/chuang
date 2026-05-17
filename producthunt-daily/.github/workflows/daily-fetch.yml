@@ -1,0 +1,43 @@
+name: Daily ProductHunt Fetch
+
+on:
+  schedule:
+    # UTC 01:00 = 北京时间 09:00（北京时间 = UTC + 8）
+    - cron: "0 1 * * *"
+  # 支持手动触发（在 GitHub Actions 页面点 "Run workflow"）
+  workflow_dispatch:
+    inputs:
+      date_override:
+        description: "手动指定采集日期，格式 YYYY-MM-DD（留空则采集昨天）"
+        required: false
+        default: ""
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 执行采集
+        env:
+          PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          FETCH_DATE_OVERRIDE: ${{ github.event.inputs.date_override }}
+        run: python main.py
+
+      - name: 提交采集结果
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "daily: ProductHunt top products update"
+          file_pattern: "producthunt.db reports/"

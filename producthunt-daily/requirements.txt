@@ -1,0 +1,4 @@
+requests>=2.31
+python-dotenv>=1.0
+schedule>=1.2          # 仅本地运行时需要
+streamlit>=1.28        # 仅数据看板时需要
