@@ -281,9 +281,11 @@ producthunt-daily/
 
 ### 5.2 获取 ProductHunt API Token
 
-1. 打开 [ProductHunt API Dashboard](https://www.producthunt.com/v2/oauth/applications)
+**前提**：需要一个 ProductHunt 账号。如果没有，先到 [producthunt.com](https://www.producthunt.com/) 注册（支持 Google/GitHub 快捷登录）。
+
+1. 登录后打开 [ProductHunt API Dashboard](https://www.producthunt.com/v2/oauth/applications)
 2. 点击 **Create an application**
-3. 填入应用名称（如 `my-daily-scraper`）和回调 URL（填 `http://localhost` 即可，本程序不需要 OAuth）
+3. 填入应用名称（如 `my-daily-scraper`）和回调 URL（填 `https://localhost` 即可，本程序用的是 Developer Token 而非 OAuth，回调地址实际不会被用到）
 4. 创建后在 Dashboard 中找到 **Developer Token**，点击 **Generate** 并复制
 
 > **注意**：Developer Token 只供个人使用，不要分享或提交到公开仓库。Token 放在 Secrets 中。
