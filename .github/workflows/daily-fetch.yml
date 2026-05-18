@@ -27,17 +27,17 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r producthunt-daily/requirements.txt
 
       - name: Run fetcher
         env:
           PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
           FETCH_DATE_OVERRIDE: ${{ github.event.inputs.date_override }}
-        run: python main.py
+        run: python producthunt-daily/main.py
 
       - name: Commit results
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "daily: ProductHunt top products update"
-          file_pattern: "producthunt.db reports/"
+          file_pattern: "producthunt-daily/producthunt.db producthunt-daily/reports/"
