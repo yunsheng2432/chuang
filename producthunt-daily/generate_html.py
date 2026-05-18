@@ -1,12 +1,17 @@
 """
 生成静态 HTML 网页
-运行方式: python generate_html.py
+运行方式: python producthunt-daily/generate_html.py
 生成文件: docs/index.html 可直接在浏览器打开
 """
 
 import json
+import sys
 from pathlib import Path
 from collections import defaultdict, Counter
+
+# 确保能找到同目录下的 storage 模块，无论从哪里执行
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from storage import load_history, get_latest_date
 
 def generate_html():
