@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProductHunt 每日热门产品数据看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-card .label {
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .ranking-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .ranking-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .ranking-table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .rank {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .votes {
+            background: #e8f1ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .tag {
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .date-header {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 20px 0 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding: 20px;
+        }
+        
+        footer p {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 ProductHunt 每日热门产品</h1>
+            <p>数据自动采集 · 每日更新</p>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number">12</div>
+                <div class="label">总记录数</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">1</div>
+                <div class="label">采集天数</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">2026-05-16</div>
+                <div class="label">最新更新</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">186</div>
+                <div class="label">平均票数</div>
+            </div>
+        </div>
+        
+        <!-- 排行榜 -->
+        <div class="section">
+            <h2>📊 每日排行榜（最近 3 天）</h2>
+
+            <div class="date-header">📅 2026-05-16 (12 个产品)</div>
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">排名</th>
+                        <th>产品名</th>
+                        <th style="width: 100px;">票数</th>
+                        <th>标签</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td class="rank">#1</td>
+                        <td><strong>Loova Agents</strong></td>
+                        <td class="votes">356</td>
+                        <td><div class="tags"><span class="tag">Marketing</span><span class="tag">Artificial Intelligence</span><span class="tag">Video</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#2</td>
+                        <td><strong>Agentmemory</strong></td>
+                        <td class="votes">264</td>
+                        <td><div class="tags"><span class="tag">Open Source</span><span class="tag">Developer Tools</span><span class="tag">Artificial Intelligence</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#3</td>
+                        <td><strong>Vivago Video Agent</strong></td>
+                        <td class="votes">211</td>
+                        <td><div class="tags"><span class="tag">Productivity</span><span class="tag">Marketing</span><span class="tag">Artificial Intelligence</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#4</td>
+                        <td><strong>Raybeam</strong></td>
+                        <td class="votes">191</td>
+                        <td><div class="tags"><span class="tag">Productivity</span><span class="tag">User Experience</span><span class="tag">Menu Bar Apps</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#5</td>
+                        <td><strong>SUN-to-Spotify </strong></td>
+                        <td class="votes">185</td>
+                        <td><div class="tags"><span class="tag">Education</span><span class="tag">Artificial Intelligence</span><span class="tag">Audio</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#6</td>
+                        <td><strong>Fere AI</strong></td>
+                        <td class="votes">179</td>
+                        <td><div class="tags"><span class="tag">Fintech</span><span class="tag">Artificial Intelligence</span><span class="tag">Web3</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#7</td>
+                        <td><strong>Gemini 3.1 Flash-Lite</strong></td>
+                        <td class="votes">159</td>
+                        <td><div class="tags"><span class="tag">API</span><span class="tag">Developer Tools</span><span class="tag">Artificial Intelligence</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#8</td>
+                        <td><strong>Files SDK</strong></td>
+                        <td class="votes">157</td>
+                        <td><div class="tags"><span class="tag">Open Source</span><span class="tag">Developer Tools</span><span class="tag">GitHub</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#9</td>
+                        <td><strong>ChatGPT for Personal Finance</strong></td>
+                        <td class="votes">148</td>
+                        <td><div class="tags"><span class="tag">Fintech</span><span class="tag">Artificial Intelligence</span><span class="tag">Business</span></div></td>
+                    </tr>
+
+                    <tr>
+                        <td class="rank">#10</td>
+                        <td><strong>Kirki</strong></td>
+                        <td class="votes">140</td>
+                        <td><div class="tags"><span class="tag">Design Tools</span><span class="tag">WordPress</span><span class="tag">Website Builder</span></div></td>
+                    </tr>
+
+                </tbody>
+            </table>
+
+        </div>
+        
+        <div class="section">
+            <h2>🏷️ 热门标签</h2>
+            <div class="tags" style="gap: 10px;">
+<span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Artificial Intelligence <span style="opacity: 0.8;">(7)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Developer Tools <span style="opacity: 0.8;">(4)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Open Source <span style="opacity: 0.8;">(3)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Productivity <span style="opacity: 0.8;">(3)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Marketing <span style="opacity: 0.8;">(2)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">GitHub <span style="opacity: 0.8;">(2)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Menu Bar Apps <span style="opacity: 0.8;">(2)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Fintech <span style="opacity: 0.8;">(2)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">Video <span style="opacity: 0.8;">(1)</span></span><span class="tag" style="background: #667eea; color: white; padding: 8px 12px; font-weight: bold;">User Experience <span style="opacity: 0.8;">(1)</span></span>
+            </div>
+        </div>
+        
+        <footer>
+            <p>💡 由 ProductHunt API 自动采集 | 数据每日更新</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">最后更新: 2026-05-16</p>
+        </footer>
+    </div>
+</body>
+</html>
