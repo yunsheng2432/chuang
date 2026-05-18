@@ -1,16 +1,14 @@
 """
 ProductHunt 数据看板 - Streamlit 版本
-运行方式: streamlit run dashboard.py
+运行方式: cd producthunt-daily && streamlit run dashboard.py
 """
 
 import streamlit as st
 import pandas as pd
 import json
-from collections import Counter
-from datetime import datetime, timedelta
+from collections import defaultdict, Counter
 from storage import load_history, get_latest_date
 
-# 页面配置
 st.set_page_config(
     page_title="ProductHunt 每日热门产品",
     page_icon="🚀",
@@ -20,189 +18,190 @@ st.set_page_config(
 
 st.title("🚀 ProductHunt 每日热门产品看板")
 
-# 侧边栏配置
-with st.sidebar:
-    st.header("⚙️ 筛选选项")
-    days = st.slider("查询天数", min_value=1, max_value=90, value=7)
-    top_n = st.slider("每天显示 Top N", min_value=1, max_value=20, value=5)
+# ---- 加载全部数据 ----
+@st.cache_data(ttl=60)
+def get_all_data():
+    return load_history(days=365)
 
-# 获取数据
-@st.cache_data
-def get_data(days):
-    return load_history(days=days)
-
-records = get_data(days)
+records = get_all_data()
 
 if not records:
-    st.warning("📭 暂无数据，请先运行采集脚本")
+    st.warning("📭 暂无数据，请先运行采集脚本（python main.py）")
     st.stop()
 
-# 数据汇总
-latest_date = get_latest_date()
-total_records = len(records)
-unique_dates = len(set(r['fetch_date'] for r in records))
+# 按日期分组
+data_by_date = defaultdict(list)
+for r in records:
+    data_by_date[r["fetch_date"]].append(r)
 
-# 显示统计卡片
+all_dates = sorted(data_by_date.keys(), reverse=True)
+latest_date = get_latest_date()
+
+# ---- 侧边栏：日期选择 ----
+with st.sidebar:
+    st.header("📅 选择日期")
+    date_option = st.radio(
+        "查看方式",
+        options=["最新一天", "选择指定日期", "查看全部日期"],
+        index=0,
+    )
+
+    if date_option == "选择指定日期":
+        selected_date = st.selectbox("选择日期", options=all_dates, index=0)
+    elif date_option == "最新一天":
+        selected_date = latest_date
+    else:
+        selected_date = None  # 全部
+
+    st.divider()
+    st.header("⚙️ 显示选项")
+    top_n = st.slider("显示 Top N", min_value=1, max_value=20, value=10)
+
+# ---- 统计卡片 ----
+total_records = len(records)
+unique_dates = len(all_dates)
+avg_votes = sum(r["votes_count"] for r in records) // max(len(records), 1)
+
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("📊 总记录数", f"{total_records}")
+    st.metric("📊 总记录数", str(total_records))
 with col2:
-    st.metric("📅 采集天数", f"{unique_dates}")
+    st.metric("📅 采集天数", str(unique_dates))
 with col3:
     st.metric("🔄 最新更新", latest_date or "无")
 with col4:
-    avg_votes = sum(r['votes_count'] for r in records) / len(records) if records else 0
-    st.metric("📈 平均票数", f"{avg_votes:.0f}")
+    st.metric("📈 平均票数", str(avg_votes))
 
 st.divider()
 
-# ===== 1️⃣ 按日期显示排行榜 =====
-st.header("1️⃣ 按日期排行榜")
+# ---- 排行榜 ----
+if selected_date:
+    st.header(f"📊 {selected_date} 排行榜")
+    items = data_by_date.get(selected_date, [])[:top_n]
 
-from collections import defaultdict
-data_by_date = defaultdict(list)
-for r in records:
-    data_by_date[r['fetch_date']].append(r)
-
-for date in sorted(data_by_date.keys(), reverse=True)[:3]:  # 显示最近 3 天
-    with st.expander(f"📅 {date} ({len(data_by_date[date])} 个产品)", expanded=(date == latest_date)):
+    if not items:
+        st.info(f"{selected_date} 暂无数据")
+    else:
+        rows = []
+        for item in items:
+            try:
+                topics = json.loads(item["topics"]) if isinstance(item["topics"], str) else item["topics"]
+                topics_str = ", ".join(topics[:5])
+            except Exception:
+                topics_str = ""
+            rows.append({
+                "排名": item["rank"],
+                "产品名": item["name"],
+                "简介": (item.get("tagline") or "")[:60],
+                "票数": item["votes_count"],
+                "标签": topics_str,
+                "官网": item.get("website", ""),
+            })
+        df = pd.DataFrame(rows)
+        st.dataframe(df, use_container_width=True, hide_index=True,
+                     column_config={
+                         "官网": st.column_config.LinkColumn("官网"),
+                         "排名": st.column_config.NumberColumn("排名", width="small"),
+                         "票数": st.column_config.NumberColumn("票数", width="small"),
+                     })
+else:
+    # 全部日期模式：每个日期一个 expander
+    st.header(f"📊 全部日期排行榜（共 {unique_dates} 天）")
+    for date in all_dates:
         items = data_by_date[date][:top_n]
-        
-        # 用表格显示
-        df = pd.DataFrame([
-            {
-                '排名': item['rank'],
-                '产品名': item['name'],
-                '票数': item['votes_count'],
-                '标签': ', '.join(json.loads(item['topics']) if isinstance(item['topics'], str) else [])[:40],
-                '官网': item['website']
-            }
-            for item in items
-        ])
-        
-        st.dataframe(df, use_container_width=True)
+        with st.expander(f"📅 {date} — Top {len(items)} 个项目", expanded=(date == latest_date)):
+            rows = []
+            for item in items:
+                try:
+                    topics = json.loads(item["topics"]) if isinstance(item["topics"], str) else item["topics"]
+                    topics_str = ", ".join(topics[:5])
+                except Exception:
+                    topics_str = ""
+                rows.append({
+                    "排名": item["rank"],
+                    "产品名": item["name"],
+                    "简介": (item.get("tagline") or "")[:60],
+                    "票数": item["votes_count"],
+                    "标签": topics_str,
+                    "官网": item.get("website", ""),
+                })
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 st.divider()
 
-# ===== 2️⃣ 趋势分析 =====
-st.header("2️⃣ 📈 趋势分析：产品热度走势")
+# ---- 趋势分析 ----
+st.header("📈 产品热度趋势")
 
 product_trends = defaultdict(list)
 for r in records:
-    product_trends[r['name']].append({
-        'date': r['fetch_date'],
-        'rank': r['rank'],
-        'votes': r['votes_count']
+    product_trends[r["name"]].append({
+        "date": r["fetch_date"],
+        "rank": r["rank"],
+        "votes": r["votes_count"]
     })
 
-# 找出出现多次的产品
-repeated_products = sorted(
-    [(name, appearances) for name, appearances in product_trends.items() if len(appearances) > 1],
+repeated = sorted(
+    [(name, apps) for name, apps in product_trends.items() if len(apps) > 1],
     key=lambda x: -len(x[1])
 )
 
-if repeated_products:
+if repeated:
     selected_product = st.selectbox(
-        "选择产品查看走势",
-        options=[name for name, _ in repeated_products],
-        format_func=lambda x: f"{x} ({len(product_trends[x])} 天)"
+        "选择出现多天的产品查看票数走势",
+        options=[name for name, _ in repeated],
+        format_func=lambda x: f"{x}（出现 {len(product_trends[x])} 天）"
     )
-    
     if selected_product:
-        product_data = product_trends[selected_product]
-        
-        # 构建数据
-        trend_df = pd.DataFrame([
-            {
-                '日期': app['date'],
-                '排名': app['rank'],
-                '票数': app['votes']
-            }
-            for app in sorted(product_data, key=lambda x: x['date'])
-        ])
-        
+        trend = sorted(product_trends[selected_product], key=lambda d: d["date"])
+        trend_df = pd.DataFrame(trend)
         col1, col2 = st.columns([2, 1])
         with col1:
-            st.line_chart(
-                trend_df.set_index('日期')[['票数']],
-                use_container_width=True
-            )
-        
+            st.line_chart(trend_df.set_index("date")[["votes"]], use_container_width=True)
         with col2:
-            st.dataframe(trend_df, use_container_width=True)
+            st.dataframe(trend_df.rename(columns={"date": "日期", "rank": "排名", "votes": "票数"}), hide_index=True)
 else:
-    st.info("📌 需要至少 2 天的数据才能显示趋势")
+    st.info("需要至少 2 天数据才能显示趋势")
 
 st.divider()
 
-# ===== 3️⃣ 热门标签分析 =====
-st.header("3️⃣ 🏷️ 热门标签分析")
+# ---- 热门标签 ----
+st.header("🏷️ 热门标签")
 
 all_topics = []
 for r in records:
     try:
-        topics = json.loads(r['topics']) if isinstance(r['topics'], str) else r['topics']
+        topics = json.loads(r["topics"]) if isinstance(r["topics"], str) else r["topics"]
         all_topics.extend(topics)
-    except:
+    except Exception:
         pass
 
 if all_topics:
     topic_counts = Counter(all_topics)
-    
+    top_topics = dict(topic_counts.most_common(15))
+
     col1, col2 = st.columns([1, 2])
-    
     with col1:
-        st.metric("🏷️ 不同标签数", len(topic_counts))
-    
+        st.metric("🏷️ 不同标签数", str(len(topic_counts)))
+        st.dataframe(
+            pd.DataFrame(top_topics.items(), columns=["标签", "出现次数"]).set_index("标签"),
+            use_container_width=True
+        )
     with col2:
-        top_topics = dict(topic_counts.most_common(10))
-        
-        # 条形图
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(10, 6))
-        topics_names = list(top_topics.keys())
-        topics_values = list(top_topics.values())
-        
-        bars = ax.barh(topics_names, topics_values, color='#1f77b4')
-        ax.set_xlabel('出现次数')
-        ax.set_title('Top 10 热门标签')
-        
-        # 在条形末尾显示数值
-        for i, (bar, value) in enumerate(zip(bars, topics_values)):
-            ax.text(value, i, f' {value}', va='center')
-        
-        plt.tight_layout()
-        st.pyplot(fig)
+        st.bar_chart(pd.Series(top_topics, name="出现次数"), use_container_width=True)
 else:
-    st.info("📭 暂无标签数据")
+    st.info("暂无标签数据")
 
 st.divider()
 
-# ===== 4️⃣ 数据导出 =====
-st.header("4️⃣ 💾 数据导出")
+# ---- 导出 ----
+st.header("💾 数据导出")
 
-# 导出为 CSV
-df_export = pd.DataFrame(records)
-csv_data = df_export.to_csv(index=False).encode('utf-8')
+col1, col2 = st.columns(2)
+with col1:
+    csv = pd.DataFrame(records).to_csv(index=False).encode("utf-8")
+    st.download_button("📥 下载 CSV", csv, f"producthunt_{latest_date}.csv", "text/csv")
+with col2:
+    st.download_button("📥 下载 JSON", json.dumps(records, ensure_ascii=False, indent=2).encode("utf-8"),
+                       f"producthunt_{latest_date}.json", "application/json")
 
-st.download_button(
-    label="📥 下载为 CSV",
-    data=csv_data,
-    file_name=f"producthunt_data_{latest_date}.csv",
-    mime="text/csv"
-)
-
-# 导出为 JSON
-json_data = json.dumps(records, ensure_ascii=False, indent=2).encode('utf-8')
-
-st.download_button(
-    label="📥 下载为 JSON",
-    data=json_data,
-    file_name=f"producthunt_data_{latest_date}.json",
-    mime="application/json"
-)
-
-st.divider()
-
-# 页脚
 st.caption(f"💡 数据最后更新: {latest_date} | 共 {total_records} 条记录 | 由 ProductHunt API 采集")
